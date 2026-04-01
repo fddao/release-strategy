@@ -1,4 +1,4 @@
 {
-  "name": "Git release strategy"
+  "name": "Git release strategy",
   "version": "0.0.1"
 }
