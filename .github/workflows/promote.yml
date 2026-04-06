@@ -1,0 +1,48 @@
+name: Create Promotion PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - qa
+          - prod
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set branches
+        id: branches
+        run: |
+          if [ "${{ inputs.target }}" = "qa" ]; then
+            echo "base=quality-assurance" >> "$GITHUB_OUTPUT"
+            echo "head=development" >> "$GITHUB_OUTPUT"
+            echo "title=QA <- Dev" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=main" >> "$GITHUB_OUTPUT"
+            echo "head=quality-assurance" >> "$GITHUB_OUTPUT"
+            echo "title=Prod <- QA" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh pr create \
+            --repo ${{ github.repository }} \
+            --base ${{ steps.branches.outputs.base }} \
+            --head ${{ steps.branches.outputs.head }} \
+            --title "${{ steps.branches.outputs.title }}" \
+            --body "Promote **${{ steps.branches.outputs.head }}** to **${{ steps.branches.outputs.base }}**."
