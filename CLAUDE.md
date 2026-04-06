@@ -25,12 +25,13 @@ feature branches → dev → qa → prod
 | `dev` → `qa`           | Merge       |
 | `qa` → `prod`          | Merge       |
 
-## Version Bump Automation (planned)
+## Version Bump Automation
 
-GitHub Action that triggers when a PR from `dev` → `qa` is merged:
+GitHub Action (`.github/workflows/bump-version.yml`) triggers when a PR from `dev` → `qa` is merged:
 
-1. Bumps version on `dev` (defaults to patch if not specified)
-2. Cherry-picks/merges the same commit into `qa`
-3. Both branches end up with the identical version commit
+1. Generates a short-lived token from the GitHub App (`fddao-version-bumper`)
+2. Bumps the patch version in `version.txt` on `dev`
+3. Cherry-picks the same commit onto `qa`
+4. Both branches end up with the identical version commit
 
-Auth: GitHub App with scoped permissions to bypass branch protection.
+Auth: GitHub App (`fddao-version-bumper`) with Contents: Read & Write, added to branch protection bypass list for `dev` and `qa`. Credentials stored as repo secrets `APP_ID` and `APP_PRIVATE_KEY`.

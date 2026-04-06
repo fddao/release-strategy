@@ -1,0 +1,60 @@
+name: Bump Version on QA Promotion
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - quality-assurance
+
+jobs:
+  bump-version:
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'development'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Checkout development
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: development
+          fetch-depth: 0
+
+      - name: Bump patch version
+        id: bump
+        run: |
+          CURRENT_VERSION=$(jq -r '.version' version.txt)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+
+          jq --arg v "$NEW_VERSION" '.version = $v' version.txt > version.tmp
+          mv version.tmp version.txt
+
+          echo "old_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        run: |
+          git config user.name "fddao-version-bumper[bot]"
+          git config user.email "fddao-version-bumper[bot]@users.noreply.github.com"
+          git add version.txt
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
+
+      - name: Push to development
+        run: git push origin development
+
+      - name: Merge version bump into quality-assurance
+        run: |
+          git checkout quality-assurance
+          git pull origin quality-assurance
+          git merge development -m "chore: merge version bump into quality-assurance"
+          git push origin quality-assurance
