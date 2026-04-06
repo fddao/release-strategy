@@ -52,10 +52,9 @@ jobs:
       - name: Push to development
         run: git push origin development
 
-      - name: Cherry-pick to quality-assurance
+      - name: Merge version bump into quality-assurance
         run: |
-          VERSION_COMMIT=$(git rev-parse HEAD)
           git checkout quality-assurance
           git pull origin quality-assurance
-          git cherry-pick "$VERSION_COMMIT"
+          git merge development -m "chore: merge version bump into quality-assurance"
           git push origin quality-assurance
