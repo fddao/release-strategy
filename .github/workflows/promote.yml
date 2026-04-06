@@ -10,6 +10,15 @@ on:
         options:
           - qa
           - prod
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   create-pr:
@@ -40,9 +49,15 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          gh pr create \
+          PR_URL=$(gh pr create \
             --repo ${{ github.repository }} \
             --base ${{ steps.branches.outputs.base }} \
             --head ${{ steps.branches.outputs.head }} \
             --title "${{ steps.branches.outputs.title }}" \
-            --body "Promote **${{ steps.branches.outputs.head }}** to **${{ steps.branches.outputs.base }}**."
+            --body "Promote **${{ steps.branches.outputs.head }}** to **${{ steps.branches.outputs.base }}**.")
+
+          if [ "${{ inputs.target }}" = "qa" ]; then
+            gh pr edit "$PR_URL" \
+              --repo ${{ github.repository }} \
+              --add-label "bump:${{ inputs.bump }}"
+          fi
